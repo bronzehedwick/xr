@@ -47,18 +47,27 @@
       "Content-Type": "application/json"
     },
     dump: JSON.stringify,
-    load: JSON.parse
+    load: JSON.parse,
+    assign: Object.assign,
+    promise: new Promise()
+  };
+
+  var assignFn = function (args) {
+    return args && args.assign && typeof args.assign === "function" ? args.assign : defaults.assign;
+  };
+  var promiseFn = function (args) {
+    return args && args.promise && typeof args.promise === "function" ? args.promise : defaults.promise;
   };
 
   var xr = function (args) {
-    return new Promise(function (resolve, reject) {
-      var opts = Object.assign({}, defaults, args);
+    return promiseFn(args)(function (resolve, reject) {
+      var opts = assignFn(args)({}, defaults, args);
       var xhr = new XMLHttpRequest();
       var params = getParams(opts.params, opts.url);
 
       xhr.open(opts.method, params ? "" + opts.url.split("?")[0] + "?" + params : opts.url, true);
       xhr.addEventListener("load", function () {
-        if (xhr.status === 200) resolve(Object.assign({}, res(xhr), {
+        if (xhr.status === 200) resolve(opts.assign({}, res(xhr), {
           data: opts.load(xhr.response)
         }), false);else reject(res(xhr));
       });
@@ -75,16 +84,16 @@
   xr.defaults = defaults;
 
   xr.get = function (url, params, args) {
-    return xr(Object.assign({ url: url, method: Methods.GET, params: params }, args));
+    return xr(assignFn(args)({ url: url, method: Methods.GET, params: params }, args));
   };
   xr.put = function (url, data, args) {
-    return xr(Object.assign({ url: url, method: Methods.PUT, data: data }, args));
+    return xr(assignFn(args)({ url: url, method: Methods.PUT, data: data }, args));
   };
   xr.post = function (url, data, args) {
-    return xr(Object.assign({ url: url, method: Methods.POST, data: data }, args));
+    return xr(assignFn(args)({ url: url, method: Methods.POST, data: data }, args));
   };
   xr.del = function (url, args) {
-    return xr(Object.assign({ url: url, method: Methods.DELETE }, args));
+    return xr(assignFn(args)({ url: url, method: Methods.DELETE }, args));
   };
 
   module.exports = xr;

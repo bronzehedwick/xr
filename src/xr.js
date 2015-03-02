@@ -35,17 +35,22 @@ const defaults = {
     'Content-Type': 'application/json'
   },
   dump: JSON.stringify,
-  load: JSON.parse
+  load: JSON.parse,
+  assign: Object.assign,
+  promise: new Promise
 };
 
-const xr = args => new Promise((resolve, reject) => {
-  let opts = Object.assign({}, defaults, args);
+const assignFn = args => (args && args.assign && typeof args.assign === 'function') ? args.assign : defaults.assign;
+const promiseFn = args => (args && args.promise && typeof args.promise === 'function') ? args.promise : defaults.promise;
+
+const xr = args => promiseFn(args)((resolve, reject) => {
+  let opts = assignFn(args)({}, defaults, args);
   let xhr = new XMLHttpRequest();
   let params = getParams(opts.params, opts.url);
 
   xhr.open(opts.method, params ? `${opts.url.split('?')[0]}?${params}` : opts.url, true);
   xhr.addEventListener('load', () => {
-    if (xhr.status === 200) resolve(Object.assign({}, res(xhr), {
+    if (xhr.status === 200) resolve(opts.assign({}, res(xhr), {
       data: opts.load(xhr.response)
     }), false);
     else reject(res(xhr));
@@ -60,9 +65,9 @@ const xr = args => new Promise((resolve, reject) => {
 xr.Methods = Methods;
 xr.defaults = defaults;
 
-xr.get = (url, params, args) => xr(Object.assign({url: url, method: Methods.GET, params: params}, args));
-xr.put = (url, data, args) => xr(Object.assign({url: url, method: Methods.PUT, data: data}, args));
-xr.post = (url, data, args) => xr(Object.assign({url: url, method: Methods.POST, data: data}, args));
-xr.del = (url, args) => xr(Object.assign({url: url, method: Methods.DELETE}, args));
+xr.get = (url, params, args) => xr(assignFn(args)({url: url, method: Methods.GET, params: params}, args));
+xr.put = (url, data, args) => xr(assignFn(args)({url: url, method: Methods.PUT, data: data}, args));
+xr.post = (url, data, args) => xr(assignFn(args)({url: url, method: Methods.POST, data: data}, args));
+xr.del = (url, args) => xr(assignFn(args)({url: url, method: Methods.DELETE}, args));
 
 export default xr;
